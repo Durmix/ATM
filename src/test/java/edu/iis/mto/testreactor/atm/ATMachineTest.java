@@ -11,7 +11,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Currency;
 import java.util.List;
-import java.util.stream.Stream;
 
 import static edu.iis.mto.testreactor.atm.ErrorCode.*;
 import static edu.iis.mto.testreactor.atm.Money.DEFAULT_CURRENCY;
@@ -28,6 +27,8 @@ class ATMachineTest {
     private MoneyDeposit deposit;
     private ATMachine atm;
     private Money money;
+    private int amount;
+
     @Mock
     private Bank bank;
 
@@ -44,6 +45,7 @@ class ATMachineTest {
         deposit = MoneyDeposit.create(DEFAULT_CURRENCY, banknotesPacks);
         atm = new ATMachine(bank, DEFAULT_CURRENCY);
         atm.setDeposit(deposit);
+        amount = deposit.getBanknotes().stream().mapToInt(x -> x.getDenomination().getDenomination() * x.getCount()).sum();
     }
 
     @Test
@@ -59,66 +61,69 @@ class ATMachineTest {
 
     @Test
     void shouldReturnWithdrawCorrectAmount_250() throws ATMOperationException {
-        money = new Money(250, DEFAULT_CURRENCY);
+        int testValue = 250;
+        money = new Money(testValue, DEFAULT_CURRENCY);
         Withdrawal withdrawal = atm.withdraw(PIN, CARD, money);
-        assertEquals(250, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
+        assertEquals(testValue, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
     }
 
     @Test
     void shouldReturnWithdrawCorrectAmount_1820() throws ATMOperationException {
-        money = new Money(1820, DEFAULT_CURRENCY);
+        int testValue = 1820;
+        money = new Money(testValue, DEFAULT_CURRENCY);
         Withdrawal withdrawal = atm.withdraw(PIN, CARD, money);
-        assertEquals(1820, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
+        assertEquals(testValue, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
     }
 
     @Test
     void shouldReturnWithdrawCorrectAmount_AllAvailableMoneyMinusTen() throws ATMOperationException {
-        int amount = deposit.getBanknotes().stream().mapToInt(x -> x.getDenomination().getDenomination() * x.getCount()).sum();
-        Withdrawal withdrawal = atm.withdraw(PIN, CARD, new Money(amount - 10, DEFAULT_CURRENCY));
-        assertEquals(amount - 10, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
+        int testValue = amount - 10;
+        money = new Money(testValue, DEFAULT_CURRENCY);
+        Withdrawal withdrawal = atm.withdraw(PIN, CARD, money);
+        assertEquals(testValue, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
     }
 
     @Test
     void shouldReturnWithdrawCorrectAmount_AllAvailableMoney() throws ATMOperationException {
-        int amount = deposit.getBanknotes().stream().mapToInt(x -> x.getDenomination().getDenomination() * x.getCount()).sum();
-        Withdrawal withdrawal = atm.withdraw(PIN, CARD, new Money(amount, DEFAULT_CURRENCY));
+        money = new Money(amount, DEFAULT_CURRENCY);
+        Withdrawal withdrawal = atm.withdraw(PIN, CARD, money);
         assertEquals(amount, withdrawal.getBanknotes().stream().mapToInt(Banknote::getDenomination).sum());
     }
 
     @Test
     void shouldThrowATMOperationException_WrongAmount_IncorrectAmount() {
-        money = new Money(137, DEFAULT_CURRENCY);
-        ATMOperationException exception = assertThrows(ATMOperationException.class, () -> {
-            atm.withdraw(PIN, CARD, money);
-        });
+        int testValue = 137;
+        money = new Money(testValue, DEFAULT_CURRENCY);
+        ATMOperationException exception = assertThrows(ATMOperationException.class,
+                () -> atm.withdraw(PIN, CARD, money));
         assertEquals(WRONG_AMOUNT, exception.getErrorCode());
     }
 
     @Test
-    void shouldThrowATMOperationException_WrongAmount_AmountGreaterThanDepositInTheMachine() throws ATMOperationException {
-        int amount = deposit.getBanknotes().stream().mapToInt(x -> x.getDenomination().getDenomination() * x.getCount()).sum();
-        ATMOperationException exception = assertThrows(ATMOperationException.class, () -> {
-            atm.withdraw(PIN, CARD, new Money(amount + 10, DEFAULT_CURRENCY));
-        });
+    void shouldThrowATMOperationException_WrongAmount_AmountGreaterThanDepositInTheMachine() {
+        int testValue = amount + 10;
+        money = new Money(testValue, DEFAULT_CURRENCY);
+        ATMOperationException exception = assertThrows(ATMOperationException.class,
+                () -> atm.withdraw(PIN, CARD, money));
         assertEquals(WRONG_AMOUNT, exception.getErrorCode());
     }
 
     @Test
     void shouldThrowATMOperationException_WrongCurrency() {
-        money = new Money(170, DOLLAR);
-        ATMOperationException exception = assertThrows(ATMOperationException.class, () -> {
-            atm.withdraw(PIN, CARD, money);
-        });
+        int testValue = 170;
+        money = new Money(testValue, DOLLAR);
+        ATMOperationException exception = assertThrows(ATMOperationException.class,
+                () -> atm.withdraw(PIN, CARD, money));
         assertEquals(WRONG_CURRENCY, exception.getErrorCode());
     }
 
     @Test
     void shouldThrowATMOperationException_Authorization() throws AuthorizationException {
-        money = new Money(150, DEFAULT_CURRENCY);
+        int testValue = 150;
+        money = new Money(testValue, DEFAULT_CURRENCY);
         Mockito.when(bank.autorize(Mockito.anyString(), Mockito.anyString())).thenThrow(AuthorizationException.class);
-        ATMOperationException exception = assertThrows(ATMOperationException.class, () -> {
-            atm.withdraw(PIN, CARD, money);
-        });
+        ATMOperationException exception = assertThrows(ATMOperationException.class,
+                () -> atm.withdraw(PIN, CARD, money));
         assertEquals(AUTHORIZATION, exception.getErrorCode());
     }
 
