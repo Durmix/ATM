@@ -1,6 +1,8 @@
 package edu.iis.mto.testreactor.atm;
 
+import edu.iis.mto.testreactor.atm.bank.AccountException;
 import edu.iis.mto.testreactor.atm.bank.AuthorizationException;
+import edu.iis.mto.testreactor.atm.bank.AuthorizationToken;
 import edu.iis.mto.testreactor.atm.bank.Bank;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -125,6 +127,18 @@ class ATMachineTest {
         ATMOperationException exception = assertThrows(ATMOperationException.class,
                 () -> atm.withdraw(PIN, CARD, money));
         assertEquals(AUTHORIZATION, exception.getErrorCode());
+    }
+
+    @Test
+    void shouldThrowATMOperationException_NoFoundsOnAccount() throws AuthorizationException, AccountException {
+        int testValue = 420;
+        AuthorizationToken token = AuthorizationToken.create("AUTH");
+        money = new Money(testValue, DEFAULT_CURRENCY);
+        Mockito.when(bank.autorize(PIN.getPIN(), CARD.getNumber())).thenReturn(token);
+        Mockito.doThrow(AccountException.class).when(bank).charge(token, money);
+        ATMOperationException exception = assertThrows(ATMOperationException.class,
+                () -> atm.withdraw(PIN, CARD, money));
+        assertEquals(NO_FUNDS_ON_ACCOUNT, exception.getErrorCode());
     }
 
 }
